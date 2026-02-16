@@ -15,6 +15,7 @@ Hemos separado las responsabilidades para evitar el antipatrón de la "Vista Gor
 | **Dominio** | `domain/` | Contiene la lógica pura (Impuestos, validaciones) e interfaces (Contratos). |
 | **Infraestructura** | `infra/` | Implementaciones técnicas externas (Pasarelas de pago, logs, APIs). |
 | **Datos** | `models.py` | Definición de tablas y persistencia mediante el ORM de Django. |
+| **API** | `api/` | Implementación de servicios expuestos a APIs. |
 
 
 
@@ -64,12 +65,18 @@ python manage.py runserver
 ## 📂 Estructura de Archivos (App: tienda_app)
 ```
 tienda/
-├── domain/           # Lógica pura e Interfaces
-│   ├── logic.py      # SRP: Cálculo de IVA
-│   └── interfaces.py # DIP: Contrato de Pago
-├── infra/            # Detalles técnicos
-│   └── gateways.py   # Implementación de Banco (Log local)
-├── services.py       # Capa de Servicio (Orquestación)
-├── views.py          # Class-Based Views
-└── models.py         # Modelos de Django
+├── api/               # Lógica de servicios para APIs
+│   ├── views.py       # Class-Based APIViews
+│   └── serializers.py # Serlialzadores de Modelos
+├── domain/            # Lógica pura e Interfaces
+│   ├── logic.py       # SRP: Cálculo de IVA
+│   └── interfaces.py  # DIP: Contrato de Pago
+│   └── builders.py    # Builder PAttern para objeto complejo Orden
+├── infra/             # Detalles técnicos
+│   └── gateways.py    # Implementación de Banco (Log local)
+│   └── factories.py   # Factory Method para generación de procesadores
+├── services.py        # Capa de Servicio (Orquestación)
+├── views.py           # Class-Based Views
+└── models.py          # Modelos de Django
+
 
