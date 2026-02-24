@@ -6,35 +6,27 @@ from django.views import View
 # Importaciones de modelos
 from .models import Libro, Inventario, Orden
 
-# Importaciones para la arquitectura limpia (Paso 3)
+# Importaciones de arquitectura (Paso 3)
 from .infra.factories import PaymentFactory
 from .services import CompraService
 
 
-# PASO 1: VISTA SPAGHETTI (FBV)
+# PASO 1: VISTA SPAGHETTI (FBV) - Para evidencia de contraste
 
 def compra_rapida_fbv(request, libro_id):
-    """
-    Punto de partida desordenado. 
-    Violaciones: SRP (Lógica en vista), OCP (Cálculo hardcoded), DIP (Acoplado a log).
-    """
     libro = get_object_or_404(Libro, id=libro_id)
 
     if request.method == 'POST':
-        # VIOLACIÓN SRP: Lógica de inventario en la vista
         inventario = Inventario.objects.get(libro=libro)
         if inventario.cantidad > 0:
-            # VIOLACIÓN OCP: Cálculo de negocio hardcoded
             total = float(libro.precio) * 1.19
-
-            # VIOLACIÓN DIP: Proceso de pago acoplado al file system
+            # Log de la versión vieja
             with open("pagos_manuales.log", "a") as f:
                 f.write(f"[{datetime.datetime.now()}] Pago FBV: ${total}\n")
 
             inventario.cantidad -= 1
             inventario.save()
             Orden.objects.create(libro=libro, total=total)
-
             return HttpResponse(f"Compra exitosa (FBV): {libro.titulo}")
         else:
             return HttpResponse("Sin stock", status=400)
@@ -50,41 +42,46 @@ def compra_rapida_fbv(request, libro_id):
 
 class CompraView(View):
     """
-    CBV: Vista Basada en Clases desacoplada.
-    Actúa como un "Portero": recibe la petición y delega al servicio.
+    Vista Profesional Basada en Clases.
+    Utiliza Inyección de Dependencias y Capa de Servicio.
     """
-    template_name = 'tienda_app/compra_rapida.html' # Ajustado al template del tutorial
+    template_name = 'tienda_app/compra_rapida.html'
 
     def setup_service(self):
-        # Inyección de dependencias mediante Factory
+        # La Factory decide qué procesador usar (Infraestructura)
         gateway = PaymentFactory.get_processor()
+        # El Servicio orquesta la lógica (Service Layer)
         return CompraService(procesador_pago=gateway)
 
     def get(self, request, libro_id):
+        # Carga la página limpia por primera vez
         servicio = self.setup_service()
-        # El servicio se encarga de preparar los datos para la interfaz
         try:
-            # Asumiendo que tu servicio tiene este método según tu código previo
             contexto = servicio.obtener_detalle_producto(libro_id)
             return render(request, self.template_name, contexto)
-        except Exception:
-            # Fallback en caso de que el método no exista aún en tu service.py
-            libro = get_object_or_404(Libro, id=libro_id)
-            total = float(libro.precio) * 1.19
-            return render(request, self.template_name, {'libro': libro, 'total': total})
+        except Exception as e:
+            return render(request, self.template_name, {'error': f"Producto no encontrado: {str(e)}"})
 
     def post(self, request, libro_id):
         servicio = self.setup_service()
+        # Primero obtenemos los datos del producto para poder re-renderizar la página
+        contexto = servicio.obtener_detalle_producto(libro_id)
+        
         try:
-            # El servicio orquesta la transacción completa
-            total = servicio.ejecutar_compra(libro_id, cantidad=1)
-            return render(
-                request,
-                self.template_name,
-                {
-                    'mensaje_exito': f"¡Gracias por su compra! Total: ${total}",
-                    'total': total,
-                },
+            # Ejecutamos la compra
+            total_final = servicio.ejecutar_compra(
+                libro_id=libro_id, 
+                cantidad=1,
+                usuario=request.user if request.user.is_authenticated else None
             )
+            
+            # Añadimos el mensaje de éxito al contexto existente
+            contexto['mensaje_exito'] = "¡Éxito! Compra procesada vía Service Layer (SOLID)."
+            contexto['total'] = total_final # Actualizamos con el valor real del Builder
+            
+            return render(request, self.template_name, contexto)
+
         except (ValueError, Exception) as e:
-            return render(request, self.template_name, {'error': str(e)}, status=400)
+            # Si algo falla (ej. sin stock), mandamos el error pero mantenemos la info del libro
+            contexto['error'] = str(e)
+            return render(request, self.template_name, contexto, status=400)

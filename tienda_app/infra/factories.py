@@ -9,12 +9,10 @@ class MockPaymentProcessor:
         return True
 
 
+from .gateways import BancoNacionalProcesador
+
 class PaymentFactory:
     @staticmethod
     def get_processor():
-        provider = os.getenv('PAYMENT_PROVIDER', 'BANCO')
-
-        if provider == 'MOCK':
-            return MockPaymentProcessor()
-
+        # Devuelve la instancia del procesador que acabas de editar
         return BancoNacionalProcesador()
