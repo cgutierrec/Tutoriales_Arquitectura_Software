@@ -1,83 +1,52 @@
-# 🚀 Django Clean Monolith: De Spaghetti a Grado Empresarial
+# Proyecto Django SOLID: Taller de Arquitectura de Software
 
-Este proyecto es una guía práctica para transformar una aplicación de Django tradicional en un sistema con arquitectura de capas, siguiendo principios de ingeniería de software utilizados en consultoría de alto nivel.
-
----
-
-## 🏗️ Resumen de la Arquitectura
-
-Hemos separado las responsabilidades para evitar el antipatrón de la "Vista Gorda" (Fat View), organizando el código en las siguientes capas:
-
-| Capa | Ubicación | Responsabilidad |
-| :--- | :--- | :--- |
-| **Presentación** | `views.py` | Recibir Requests, delegar al servicio y retornar Responses (HTML/JSON). |
-| **Servicio** | `services.py` | Orquestar el flujo de negocio. Es el "Cerebro" que conecta el dominio con los datos. |
-| **Dominio** | `domain/` | Contiene la lógica pura (Impuestos, validaciones) e interfaces (Contratos). |
-| **Infraestructura** | `infra/` | Implementaciones técnicas externas (Pasarelas de pago, logs, APIs). |
-| **Datos** | `models.py` | Definición de tablas y persistencia mediante el ORM de Django. |
-| **API** | `api/` | Implementación de servicios expuestos a APIs. |
-
-
+## Descripcion del Proyecto
+Este proyecto consiste en la implementacion de una tienda de libros utilizando el framework Django, con un enfoque progresivo desde una arquitectura monolitica acoplada hacia una arquitectura limpia basada en los principios SOLID y patrones de diseño empresariales.
 
 ---
 
-## 🛡️ Principios SOLID Aplicados
-
-1. **S - Single Responsibility:** Cada clase tiene una sola razón para existir. El `CalculadorImpuestos` no sabe de bases de datos; la `View` no sabe de impuestos.
-2. **O - Open/Closed:** El sistema está abierto a nuevas reglas de negocio (ej. nuevos impuestos) sin necesidad de modificar el flujo principal de compra.
-3. **L - Liskov Substitution:** Podemos intercambiar el `BancoNacionalProcesador` por cualquier otro procesador que siga la interfaz `ProcesadorPago`.
-4. **I - Interface Segregation:** Las interfaces en `domain/interfaces.py` son específicas y minimalistas.
-5. **D - Dependency Inversion:** La capa de servicio no depende de una implementación de banco concreta, sino de una abstracción (Interfaz).
+## Objetivos del Taller
+1. Demostrar la transicion de codigo spaghetti hacia una estructura desacoplada.
+2. Implementar la inyeccion de dependencias para el procesamiento de pagos.
+3. Utilizar el patron de diseño Builder para la creacion de ordenes complejas.
+4. Aplicar el patron Factory para la gestion de proveedores de infraestructura.
+5. Garantizar la trazabilidad de las operaciones mediante logs personalizados.
 
 ---
 
-## 🛠️ Instalación y Configuración
+## Fases de Implementacion
 
-Siga estos pasos para poner en marcha el entorno local:
+### Paso 1: Vista Basada en Funciones (FBV) Spaghetti
+Se desarrollo una primera version de la compra de libros directamente en el archivo views.py. En esta etapa, la vista era responsable de validar el inventario, calcular impuestos de forma manual, escribir directamente en el sistema de archivos para registrar el pago y crear el registro en la base de datos. Esta fase evidencio violaciones a los principios de Responsabilidad Unica (SRP) e Inversion de Dependencias (DIP).
 
-### 1. Clonar y Preparar Entorno
-```bash
-git clone [https://github.com/tu-usuario/django-clean-monolith.git](https://github.com/tu-usuario/django-clean-monolith.git)
-cd django-clean-monolith
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install django
-```
-### 2. Base de datos
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
+### Paso 2: Vista Basada en Clases (CBV)
+Se realizo la refactorizacion de la interfaz hacia Clases Basadas en Vistas. Esto permitio separar los metodos GET y POST, preparando el terreno para la inyeccion del servicio de negocio.
 
-### 3. Crear Datos e Prueba
-Ejecute el shell de Django: python manage.py shell
-```bash
-from tienda.models import Libro, Inventario
-l = Libro.objects.create(titulo="Arquitectura Limpia", precio=250.0)
-Inventario.objects.create(libro=l, cantidad=5)
-```
+### Paso 3: Capa de Servicio e Infraestructura (SOLID)
+Se implemento la arquitectura final dividida en las siguientes capas:
+* **Capa de Dominio**: Contiene la logica pura de negocio, como el CalculadorImpuestos y el OrdenBuilder para la construccion de objetos Orden.
+* **Capa de Servicio**: El archivo services.py actua como orquestador, recibiendo dependencias externas y coordinando las acciones entre el dominio y la base de datos.
+* **Capa de Infraestructura**: Implementacion de Gateways y Factories para el procesamiento de pagos sin acoplar la logica de negocio a proveedores especificos.
 
-### 4. Ejecutar
-```bash
-python manage.py runserver
-```
+---
 
-## 📂 Estructura de Archivos (App: tienda_app)
-```
-tienda/
-├── api/               # Lógica de servicios para APIs
-│   ├── views.py       # Class-Based APIViews
-│   └── serializers.py # Serlialzadores de Modelos
-├── domain/            # Lógica pura e Interfaces
-│   ├── logic.py       # SRP: Cálculo de IVA
-│   └── interfaces.py  # DIP: Contrato de Pago
-│   └── builders.py    # Builder PAttern para objeto complejo Orden
-├── infra/             # Detalles técnicos
-│   └── gateways.py    # Implementación de Banco (Log local)
-│   └── factories.py   # Factory Method para generación de procesadores
-├── services.py        # Capa de Servicio (Orquestación)
-├── views.py           # Class-Based Views
-└── models.py          # Modelos de Django
+## Patrones de Diseño Utilizados
+* **Builder**: Utilizado para construir la instancia de Orden de manera fluida, asegurando que todos los campos requeridos se validen antes de la persistencia.
+* **Factory**: Utilizado para instanciar el procesador de pagos (BancoNacionalProcesador) de manera que la vista no conozca la implementacion concreta.
+* **Dependency Injection**: El servicio de compra recibe a traves de su constructor el motor de pagos, facilitando las pruebas unitarias y el intercambio de proveedores.
 
+---
 
-"# Tutoriales_Arquitectura_Software" 
+## Evidencias de Ejecucion
+Se realizaron pruebas de funcionalidad ejecutando compras multiples. La correcta operacion del sistema se verifica mediante:
+1. Actualizacion automatica del stock en la tabla Inventario.
+2. Persistencia de registros en la tabla Orden.
+3. Generacion de un archivo de log especializado llamado pagos_locales_CRISTOBAL_FLOREZ.log, el cual documenta cada transaccion procesada por la capa de infraestructura.
+
+---
+
+## Tecnologias Empleadas
+* Python 3.11
+* Django 5.2.11
+* SQLite3
+* Git para el control de versiones por ramas (feature/fbv-spaghetti y feature/solid-architecture).
