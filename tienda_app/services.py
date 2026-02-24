@@ -1,16 +1,9 @@
 from django.shortcuts import get_object_or_404
-
 from .domain.builders import OrdenBuilder
 from .domain.logic import CalculadorImpuestos
 from .models import Inventario, Libro
 
-
 class CompraService:
-    """
-    SERVICE LAYER: Orquesta la interacción entre el dominio,
-    la infraestructura y la base de datos.
-    """
-
     def __init__(self, procesador_pago):
         self.procesador_pago = procesador_pago
         self.builder = OrdenBuilder()
@@ -20,28 +13,26 @@ class CompraService:
         total = CalculadorImpuestos.obtener_total_con_iva(libro.precio)
         return {"libro": libro, "total": total}
 
-    def ejecutar_compra(self, libro_id, cantidad=1, direccion="", usuario=None):
+    def ejecutar_compra(self, libro_id, cantidad=1, direccion="Calle Falsa 123", usuario=None):
         libro = get_object_or_404(Libro, id=libro_id)
         inv = get_object_or_404(Inventario, libro=libro)
 
         if inv.cantidad < cantidad:
-            raise ValueError("No hay suficiente stock para completar la compra.")
+            raise ValueError("No hay suficiente stock.")
 
+        # Construcción de la orden usando el patrón Builder
         orden = (
             self.builder
             .con_usuario(usuario)
-            .con_libro(libro)
-            .con_cantidad(cantidad)
-            .para_envio(direccion)
+            .con_productos([libro])
+            .para_envio(direccion) # Asegúrate de pasar una dirección por defecto
             .build()
         )
 
-        pago_exitoso = self.procesador_pago.pagar(orden.total)
-        if not pago_exitoso:
-            orden.delete()
-            raise Exception("La transacción fue rechazada por el banco.")
-
-        inv.cantidad -= cantidad
-        inv.save()
-
-        return orden.total
+        if self.procesador_pago.pagar(orden.total):
+            inv.cantidad -= cantidad
+            inv.save()
+            return orden.total
+        
+        orden.delete()
+        raise Exception("Pago rechazado.")

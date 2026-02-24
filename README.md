@@ -1,47 +1,50 @@
-# Proyecto Django SOLID: Taller de Arquitectura de Software
+# Proyecto Django: Arquitectura de Software y Patrones Creacionales
 
 ## Descripcion del Proyecto
-Este proyecto consiste en la implementacion de una tienda de libros utilizando el framework Django, con un enfoque progresivo desde una arquitectura monolitica acoplada hacia una arquitectura limpia basada en los principios SOLID y patrones de diseño empresariales.
+Este repositorio documenta la evolucion de un sistema de comercio electronico desarrollado en Django, transitando desde un diseño monolitico funcional hasta una arquitectura desacoplada basada en principios SOLID y patrones creacionales de diseño (Factory Method y Builder).
 
 ---
 
 ## Objetivos del Taller
-1. Demostrar la transicion de codigo spaghetti hacia una estructura desacoplada.
-2. Implementar la inyeccion de dependencias para el procesamiento de pagos.
-3. Utilizar el patron de diseño Builder para la creacion de ordenes complejas.
-4. Aplicar el patron Factory para la gestion de proveedores de infraestructura.
-5. Garantizar la trazabilidad de las operaciones mediante logs personalizados.
+1. Aplicar los principios SOLID para reducir el acoplamiento y aumentar la cohesion del codigo.
+2. Implementar el patron Factory Method para la gestion dinamica de infraestructura mediante variables de entorno.
+3. Utilizar el patron Builder para la construccion de objetos de dominio complejos, asegurando la integridad de los datos.
+4. Establecer un flujo de trabajo profesional mediante el uso de ramas en Git.
 
 ---
 
-## Fases de Implementacion
+## Fases de Desarrollo
 
-### Paso 1: Vista Basada en Funciones (FBV) Spaghetti
-Se desarrollo una primera version de la compra de libros directamente en el archivo views.py. En esta etapa, la vista era responsable de validar el inventario, calcular impuestos de forma manual, escribir directamente en el sistema de archivos para registrar el pago y crear el registro en la base de datos. Esta fase evidencio violaciones a los principios de Responsabilidad Unica (SRP) e Inversion de Dependencias (DIP).
+### Tutorial 01: Arquitectura SOLID y Service Layer
+En esta fase se transformo una vista funcional desordenada (spaghetti) en una estructura de capas:
+* **Service Layer**: Se creo la clase CompraService para orquestar la logica de negocio, separandola de la logica de presentacion.
+* **Inversion de Dependencias**: Se definieron interfaces para el procesamiento de pagos, permitiendo que el sistema dependa de abstracciones y no de implementaciones concretas.
+* **Evidencia**: Generacion de logs de auditoria personalizados (pagos_locales_CRISTOBAL_FLOREZ.log).
 
-### Paso 2: Vista Basada en Clases (CBV)
-Se realizo la refactorizacion de la interfaz hacia Clases Basadas en Vistas. Esto permitio separar los metodos GET y POST, preparando el terreno para la inyeccion del servicio de negocio.
-
-### Paso 3: Capa de Servicio e Infraestructura (SOLID)
-Se implemento la arquitectura final dividida en las siguientes capas:
-* **Capa de Dominio**: Contiene la logica pura de negocio, como el CalculadorImpuestos y el OrdenBuilder para la construccion de objetos Orden.
-* **Capa de Servicio**: El archivo services.py actua como orquestador, recibiendo dependencias externas y coordinando las acciones entre el dominio y la base de datos.
-* **Capa de Infraestructura**: Implementacion de Gateways y Factories para el procesamiento de pagos sin acoplar la logica de negocio a proveedores especificos.
-
----
-
-## Patrones de Diseño Utilizados
-* **Builder**: Utilizado para construir la instancia de Orden de manera fluida, asegurando que todos los campos requeridos se validen antes de la persistencia.
-* **Factory**: Utilizado para instanciar el procesador de pagos (BancoNacionalProcesador) de manera que la vista no conozca la implementacion concreta.
-* **Dependency Injection**: El servicio de compra recibe a traves de su constructor el motor de pagos, facilitando las pruebas unitarias y el intercambio de proveedores.
+### Tutorial 02: Patrones Creacionales
+Se optimizo la creacion de objetos mediante patrones especificos:
+* **Factory Method**: Implementado en la clase PaymentFactory. Este componente permite inyectar diferentes procesadores de pago (Banco Real o Mock de Pruebas) basandose en la variable de entorno PAYMENT_PROVIDER. Esto permite que la aplicacion sea Docker-Ready y facilite las pruebas unitarias.
+* **Patron Builder**: Implementado en la clase OrdenBuilder. Se utiliza para ensamblar objetos de tipo Orden de forma fluida, encapsulando el calculo de impuestos (IVA 19%) y validando que los productos y el usuario esten presentes antes de la persistencia.
 
 ---
 
-## Evidencias de Ejecucion
-Se realizaron pruebas de funcionalidad ejecutando compras multiples. La correcta operacion del sistema se verifica mediante:
-1. Actualizacion automatica del stock en la tabla Inventario.
-2. Persistencia de registros en la tabla Orden.
-3. Generacion de un archivo de log especializado llamado pagos_locales_CRISTOBAL_FLOREZ.log, el cual documenta cada transaccion procesada por la capa de infraestructura.
+## Estructura de la Solucion
+* **tienda_app/domain**: Contiene la logica pura de negocio y los constructores (Builders).
+* **tienda_app/infra**: Aloja los Gateways para comunicacion con servicios externos y las Fabricas (Factories).
+* **tienda_app/services.py**: Actua como mediador entre las vistas y el dominio.
+* **tienda_app/views.py**: Vistas basadas en clases (CBV) que actuan como puntos de entrada agnosticos a la implementacion.
+
+---
+
+## Instrucciones de Ejecucion y Pruebas
+
+### Modo Produccion (Banco Real)
+Para ejecutar el sistema utilizando la infraestructura de pagos real:
+python manage.py runserver
+
+### Modo Desarrollo (Mock Payment)
+Para ejecutar el sistema en modo de pruebas y observar los mensajes de depuracion por consola (CMD):
+set PAYMENT_PROVIDER=MOCK && python manage.py runserver
 
 ---
 
@@ -49,4 +52,4 @@ Se realizaron pruebas de funcionalidad ejecutando compras multiples. La correcta
 * Python 3.11
 * Django 5.2.11
 * SQLite3
-* Git para el control de versiones por ramas (feature/fbv-spaghetti y feature/solid-architecture).
+* Control de versiones: Git (Flujo basado en ramas por caracteristicas).
