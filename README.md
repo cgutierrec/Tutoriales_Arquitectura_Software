@@ -1,55 +1,88 @@
-# Proyecto Django: Arquitectura de Software y Patrones Creacionales
+# Proyecto Django: Arquitectura Limpia y APIs Escalables
 
 ## Descripcion del Proyecto
-Este repositorio documenta la evolucion de un sistema de comercio electronico desarrollado en Django, transitando desde un diseño monolitico funcional hasta una arquitectura desacoplada basada en principios SOLID y patrones creacionales de diseño (Factory Method y Builder).
+
+Este repositorio documenta la evolucion de un sistema de comercio electronico desarrollado en Django. El proyecto demuestra la transicion de un diseño monolitico acoplado (spaghetti code) hacia una arquitectura profesional de software basada en capas, principios SOLID y patrones creacionales.
 
 ---
 
 ## Objetivos del Taller
-1. Aplicar los principios SOLID para reducir el acoplamiento y aumentar la cohesion del codigo.
-2. Implementar el patron Factory Method para la gestion dinamica de infraestructura mediante variables de entorno.
-3. Utilizar el patron Builder para la construccion de objetos de dominio complejos, asegurando la integridad de los datos.
-4. Establecer un flujo de trabajo profesional mediante el uso de ramas en Git.
+
+1. Implementar una **Capa de Servicio (Service Layer)** para desacoplar la logica de negocio de los controladores.
+2. Aplicar el patron **Factory Method** para gestionar la infraestructura de pagos de forma dinamica.
+3. Utilizar el patron **Builder** para la construccion robusta de objetos de dominio complejos.
+4. Exponer la logica de negocio a traves de una **API REST** utilizando Django Rest Framework (DRF), permitiendo un enfoque de Backend Headless.
 
 ---
 
 ## Fases de Desarrollo
 
-### Tutorial 01: Arquitectura SOLID y Service Layer
-En esta fase se transformo una vista funcional desordenada (spaghetti) en una estructura de capas:
-* **Service Layer**: Se creo la clase CompraService para orquestar la logica de negocio, separandola de la logica de presentacion.
-* **Inversion de Dependencias**: Se definieron interfaces para el procesamiento de pagos, permitiendo que el sistema dependa de abstracciones y no de implementaciones concretas.
-* **Evidencia**: Generacion de logs de auditoria personalizados (pagos_locales_CRISTOBAL_FLOREZ.log).
+### Tutorial 01: Arquitectura SOLID y Capa de Servicio
 
-### Tutorial 02: Patrones Creacionales
-Se optimizo la creacion de objetos mediante patrones especificos:
-* **Factory Method**: Implementado en la clase PaymentFactory. Este componente permite inyectar diferentes procesadores de pago (Banco Real o Mock de Pruebas) basandose en la variable de entorno PAYMENT_PROVIDER. Esto permite que la aplicacion sea Docker-Ready y facilite las pruebas unitarias.
-* **Patron Builder**: Implementado en la clase OrdenBuilder. Se utiliza para ensamblar objetos de tipo Orden de forma fluida, encapsulando el calculo de impuestos (IVA 19%) y validando que los productos y el usuario esten presentes antes de la persistencia.
+Se transformo la logica de compra desde vistas funcionales desordenadas hacia una estructura de capas definida para cumplir con el principio de Responsabilidad Unica (SRP).
 
----
+* **Service Layer**: Creacion de `CompraService` para orquestar la logica de negocio.
+* **Inversion de Dependencias**: El sistema depende de abstracciones para el procesamiento de pagos.
+* **Evidencia**: Registro de auditoria en el archivo `pagos_locales_CRISTOBAL_FLOREZ.log`.
 
-## Estructura de la Solucion
-* **tienda_app/domain**: Contiene la logica pura de negocio y los constructores (Builders).
-* **tienda_app/infra**: Aloja los Gateways para comunicacion con servicios externos y las Fabricas (Factories).
-* **tienda_app/services.py**: Actua como mediador entre las vistas y el dominio.
-* **tienda_app/views.py**: Vistas basadas en clases (CBV) que actuan como puntos de entrada agnosticos a la implementacion.
+### Tutorial 02: Patrones Creacionales (Factory & Builder)
 
----
+* **Factory Method**: Implementacion de `PaymentFactory` que lee la variable de entorno `PAYMENT_PROVIDER`. Permite alternar entre un procesador de pagos real y un `MockPaymentProcessor` para pruebas de desarrollo.
+* **OrdenBuilder**: Diseño de un constructor fluido para el modelo `Orden`, encapsulando el calculo de impuestos (IVA 19%) y garantizando la integridad de los datos antes de la persistencia.
 
-## Instrucciones de Ejecucion y Pruebas
+### Tutorial 03: Backend Headless (API REST con DRF)
 
-### Modo Produccion (Banco Real)
-Para ejecutar el sistema utilizando la infraestructura de pagos real:
-python manage.py runserver
+Se integro Django Rest Framework para permitir que clientes externos realicen compras mediante peticiones JSON, demostrando que la arquitectura es independiente del cliente (Web o App).
 
-### Modo Desarrollo (Mock Payment)
-Para ejecutar el sistema en modo de pruebas y observar los mensajes de depuracion por consola (CMD):
-set PAYMENT_PROVIDER=MOCK && python manage.py runserver
+* **Reutilizacion**: La API utiliza el mismo `CompraService` que la interfaz HTML.
+* **Endpoint**: `POST /api/v1/comprar/`
+* **Serializacion**: Uso de `Serializers` como adaptadores para la validacion y transformacion de datos JSON a objetos de Python.
 
 ---
 
-## Tecnologias Empleadas
+## Estructura de la Solucion (Clean Architecture)
+
+* **tienda_app/domain/**: Logica pura de negocio y constructores (Builders).
+* **tienda_app/infra/**: Adaptadores de infraestructura y fabricas (Gateways, Factories).
+* **tienda_app/api/**: Capa de entrada para clientes REST (Serializers, APIViews).
+* **tienda_app/services.py**: Orquestador que vincula todas las capas.
+
+---
+
+## Instrucciones de Configuracion y Ejecucion
+
+### Modos de Ejecucion
+
+El sistema se adapta al entorno segun la configuracion de la terminal:
+
+* **Modo Produccion (Log Real)**:
+
+  ```cmd
+  python manage.py runserver
+  ```
+
+* **Modo Desarrollo (Debug Mock)**:
+
+  ```cmd
+  set PAYMENT_PROVIDER=MOCK && python manage.py runserver
+  ```
+
+### Pruebas de API
+
+Para realizar una compra via API, enviar una peticion POST a `/api/v1/comprar/` con el siguiente cuerpo:
+
+```json
+{
+    "libro_id": 2,
+    "direccion_envio": "Direccion de prueba API"
+}
+```
+
+---
+
+## Tecnologias Utilizadas
+
 * Python 3.11
 * Django 5.2.11
-* SQLite3
-* Control de versiones: Git (Flujo basado en ramas por caracteristicas).
+* Django Rest Framework (DRF)
+* Git: Flujo de trabajo basado en ramas (`feature/solid`, `feature/tutorial-02`, `feature/tutorial-03`).
