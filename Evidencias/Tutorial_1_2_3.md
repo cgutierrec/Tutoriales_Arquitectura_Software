@@ -2,6 +2,8 @@
 
 ## Descripcion del Proyecto
 
+Nombre: Cristobal Gutierrez
+
 Este repositorio documenta la evolucion de un sistema de comercio electronico desarrollado en Django. El proyecto demuestra la transicion de un diseño monolitico acoplado (spaghetti code) hacia una arquitectura profesional de software basada en capas, principios SOLID y patrones creacionales.
 
 ---
