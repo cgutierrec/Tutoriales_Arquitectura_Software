@@ -1,82 +1,88 @@
-# 🚀 Django Clean Monolith: De Spaghetti a Grado Empresarial
+# Proyecto Django: Arquitectura Limpia y APIs Escalables
 
-Este proyecto es una guía práctica para transformar una aplicación de Django tradicional en un sistema con arquitectura de capas, siguiendo principios de ingeniería de software utilizados en consultoría de alto nivel.
+## Descripcion del Proyecto
 
----
-
-## 🏗️ Resumen de la Arquitectura
-
-Hemos separado las responsabilidades para evitar el antipatrón de la "Vista Gorda" (Fat View), organizando el código en las siguientes capas:
-
-| Capa | Ubicación | Responsabilidad |
-| :--- | :--- | :--- |
-| **Presentación** | `views.py` | Recibir Requests, delegar al servicio y retornar Responses (HTML/JSON). |
-| **Servicio** | `services.py` | Orquestar el flujo de negocio. Es el "Cerebro" que conecta el dominio con los datos. |
-| **Dominio** | `domain/` | Contiene la lógica pura (Impuestos, validaciones) e interfaces (Contratos). |
-| **Infraestructura** | `infra/` | Implementaciones técnicas externas (Pasarelas de pago, logs, APIs). |
-| **Datos** | `models.py` | Definición de tablas y persistencia mediante el ORM de Django. |
-| **API** | `api/` | Implementación de servicios expuestos a APIs. |
-
-
+Este repositorio documenta la evolucion de un sistema de comercio electronico desarrollado en Django. El proyecto demuestra la transicion de un diseño monolitico acoplado (spaghetti code) hacia una arquitectura profesional de software basada en capas, principios SOLID y patrones creacionales.
 
 ---
 
-## 🛡️ Principios SOLID Aplicados
+## Objetivos del Taller
 
-1. **S - Single Responsibility:** Cada clase tiene una sola razón para existir. El `CalculadorImpuestos` no sabe de bases de datos; la `View` no sabe de impuestos.
-2. **O - Open/Closed:** El sistema está abierto a nuevas reglas de negocio (ej. nuevos impuestos) sin necesidad de modificar el flujo principal de compra.
-3. **L - Liskov Substitution:** Podemos intercambiar el `BancoNacionalProcesador` por cualquier otro procesador que siga la interfaz `ProcesadorPago`.
-4. **I - Interface Segregation:** Las interfaces en `domain/interfaces.py` son específicas y minimalistas.
-5. **D - Dependency Inversion:** La capa de servicio no depende de una implementación de banco concreta, sino de una abstracción (Interfaz).
+1. Implementar una **Capa de Servicio (Service Layer)** para desacoplar la logica de negocio de los controladores.
+2. Aplicar el patron **Factory Method** para gestionar la infraestructura de pagos de forma dinamica.
+3. Utilizar el patron **Builder** para la construccion robusta de objetos de dominio complejos.
+4. Exponer la logica de negocio a traves de una **API REST** utilizando Django Rest Framework (DRF), permitiendo un enfoque de Backend Headless.
 
 ---
 
-## 🛠️ Instalación y Configuración
+## Fases de Desarrollo
 
-Siga estos pasos para poner en marcha el entorno local:
+### Tutorial 01: Arquitectura SOLID y Capa de Servicio
 
-### 1. Clonar y Preparar Entorno
-```bash
-git clone [https://github.com/tu-usuario/django-clean-monolith.git](https://github.com/tu-usuario/django-clean-monolith.git)
-cd django-clean-monolith
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install django
+Se transformo la logica de compra desde vistas funcionales desordenadas hacia una estructura de capas definida para cumplir con el principio de Responsabilidad Unica (SRP).
+
+* **Service Layer**: Creacion de `CompraService` para orquestar la logica de negocio.
+* **Inversion de Dependencias**: El sistema depende de abstracciones para el procesamiento de pagos.
+* **Evidencia**: Registro de auditoria en el archivo `pagos_locales_CRISTOBAL_FLOREZ.log`.
+
+### Tutorial 02: Patrones Creacionales (Factory & Builder)
+
+* **Factory Method**: Implementacion de `PaymentFactory` que lee la variable de entorno `PAYMENT_PROVIDER`. Permite alternar entre un procesador de pagos real y un `MockPaymentProcessor` para pruebas de desarrollo.
+* **OrdenBuilder**: Diseño de un constructor fluido para el modelo `Orden`, encapsulando el calculo de impuestos (IVA 19%) y garantizando la integridad de los datos antes de la persistencia.
+
+### Tutorial 03: Backend Headless (API REST con DRF)
+
+Se integro Django Rest Framework para permitir que clientes externos realicen compras mediante peticiones JSON, demostrando que la arquitectura es independiente del cliente (Web o App).
+
+* **Reutilizacion**: La API utiliza el mismo `CompraService` que la interfaz HTML.
+* **Endpoint**: `POST /api/v1/comprar/`
+* **Serializacion**: Uso de `Serializers` como adaptadores para la validacion y transformacion de datos JSON a objetos de Python.
+
+---
+
+## Estructura de la Solucion (Clean Architecture)
+
+* **tienda_app/domain/**: Logica pura de negocio y constructores (Builders).
+* **tienda_app/infra/**: Adaptadores de infraestructura y fabricas (Gateways, Factories).
+* **tienda_app/api/**: Capa de entrada para clientes REST (Serializers, APIViews).
+* **tienda_app/services.py**: Orquestador que vincula todas las capas.
+
+---
+
+## Instrucciones de Configuracion y Ejecucion
+
+### Modos de Ejecucion
+
+El sistema se adapta al entorno segun la configuracion de la terminal:
+
+* **Modo Produccion (Log Real)**:
+
+  ```cmd
+  python manage.py runserver
+  ```
+
+* **Modo Desarrollo (Debug Mock)**:
+
+  ```cmd
+  set PAYMENT_PROVIDER=MOCK && python manage.py runserver
+  ```
+
+### Pruebas de API
+
+Para realizar una compra via API, enviar una peticion POST a `/api/v1/comprar/` con el siguiente cuerpo:
+
+```json
+{
+    "libro_id": 2,
+    "direccion_envio": "Direccion de prueba API"
+}
 ```
-### 2. Base de datos
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
 
-### 3. Crear Datos e Prueba
-Ejecute el shell de Django: python manage.py shell
-```bash
-from tienda.models import Libro, Inventario
-l = Libro.objects.create(titulo="Arquitectura Limpia", precio=250.0)
-Inventario.objects.create(libro=l, cantidad=5)
-```
+---
 
-### 4. Ejecutar
-```bash
-python manage.py runserver
-```
+## Tecnologias Utilizadas
 
-## 📂 Estructura de Archivos (App: tienda_app)
-```
-tienda/
-├── api/               # Lógica de servicios para APIs
-│   ├── views.py       # Class-Based APIViews
-│   └── serializers.py # Serlialzadores de Modelos
-├── domain/            # Lógica pura e Interfaces
-│   ├── logic.py       # SRP: Cálculo de IVA
-│   └── interfaces.py  # DIP: Contrato de Pago
-│   └── builders.py    # Builder PAttern para objeto complejo Orden
-├── infra/             # Detalles técnicos
-│   └── gateways.py    # Implementación de Banco (Log local)
-│   └── factories.py   # Factory Method para generación de procesadores
-├── services.py        # Capa de Servicio (Orquestación)
-├── views.py           # Class-Based Views
-└── models.py          # Modelos de Django
-
-
+* Python 3.11
+* Django 5.2.11
+* Django Rest Framework (DRF)
+* Git: Flujo de trabajo basado en ramas (`feature/solid`, `feature/tutorial-02`, `feature/tutorial-03`).
